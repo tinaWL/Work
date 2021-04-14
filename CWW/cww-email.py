@@ -3,13 +3,10 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from jinja2 import Environment
 
-sender_email = "tinabuztech@gmail.com"
+sender_email = "tina@williamsburglearning.com"
 receiver_email = "tinabuztech@gmail.com"
 password = input("Type your password and press enter:")
 
-
-message["From"] = sender_email
-message["To"] = receiver_email
 
 
 TEMPLATE = """\
@@ -194,11 +191,10 @@ TEMPLATE = """\
 
 
 
-
 context = ssl.create_default_context()
 with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
     server.login(sender_email, password)
-    with open("null-emails.csv") as file:
+    with open("nulle2.csv") as file:
         reader = csv.reader(file)
         for name, buddy in reader:
             buddy.encode('utf-8')
@@ -208,6 +204,7 @@ with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
                     buddies=buddy
                 ), "html"
             )
+            message["Subject"] = "CWW!"
             server.sendmail(
                 sender_email,
                 receiver_email,

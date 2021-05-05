@@ -94,7 +94,10 @@ UNION
 select * from mla_neither
 group by mla_neither.pid;
 
-select * from final;
+select * from mla_all ma
+left join final f on ma.pid = f.pid
+group by f.pid;
+
 /*drop temporary table if exists mla_none;
 create temporary table mla_none
 SELECT distinct ma.pid as 'pid', ma.prid as 'prid'

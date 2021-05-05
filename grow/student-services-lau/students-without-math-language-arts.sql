@@ -1,4 +1,4 @@
-SELECT * FROM `e` WHERE 1DELIMITER $$
+DELIMITER $$
 DROP PROCEDURE IF EXISTS sp_test_math_la$$
 CREATE PROCEDURE sp_test_math_la()
 

@@ -4,8 +4,7 @@ CREATE PROCEDURE sp_test_grad_plan()
 
 BEGIN
 
-drop temporary table if exists mla_all;
-create temporary table mla_all 
+drop temporary table if exists gpIDs;
 
 CREATE TEMPORARY TABLE IF NOT EXISTS gpIDs AS
 

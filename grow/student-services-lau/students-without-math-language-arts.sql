@@ -22,7 +22,7 @@ SELECT distinct  pr.programid as 'prid', e.personid as 'pid', cf.filecount as 'L
     JOIN studentdebit sd USING (studentdebitid)
     LEFT JOIN thirdpartypayerengagement tppe USING (tppengagementid)
     LEFT JOIN thirdpartypayer tpp ON tpp.TPPayerID=tppe.TPPayerID
-     LEFT JOIN (
+     LEFT JOIN ( -- 504/IEP info
         SELECT pf.personid, COUNT(pf.person_fileid) AS 'FileCount'
         FROM person_file pf 
         WHERE pf.is_confidential=1
@@ -32,7 +32,7 @@ WHERE s.semesterid = 44 AND e.credithours > 0 AND e.statusid = 1 AND h.begindate
 order by pid;
         
 
-drop temporary table if exists mla_both;
+drop temporary table if exists mla_both; -- all students currently enrolled in math and/or language arts classes
 create temporary table mla_both
 SELECT distinct  ma.prid as 'prid', ma.pid as 'pid'
     FROM mla_all ma 
@@ -40,22 +40,21 @@ SELECT distinct  ma.prid as 'prid', ma.pid as 'pid'
 order by pid;
 
 
-
-drop temporary table if exists mla_no_math;
+drop temporary table if exists mla_no_math; -- students not enrolled in any math class
 create temporary table mla_no_math
 SELECT distinct  ma.prid as 'prid', ma.pid as 'pid'
     FROM mla_all ma 
     where ma.pid not in(select pid from mla_both where prid in(2,18))
 order by pid;
 
-drop temporary table if exists mla_no_la;
+drop temporary table if exists mla_no_la; -- students not enrolled in any language arts class
 create temporary table mla_no_la
 SELECT distinct  ma.prid as 'prid', ma.pid as 'pid'
     FROM mla_all ma 
     where ma.pid not in(select pid from mla_both where prid in(5,20))
 order by pid;
 
-drop temporary table if exists mla_neither;
+drop temporary table if exists mla_neither; -- students enrolled in NEITHER math nor language arts 
 create temporary table mla_neither
 SELECT distinct ma.pid as 'pid'
     FROM mla_all ma 
@@ -63,7 +62,7 @@ SELECT distinct ma.pid as 'pid'
     order by pid;
     
 
-drop temporary table if exists math_final;
+drop temporary table if exists math_final; -- students ONLY missing math
 create temporary table math_final
 SELECT distinct  pid
     FROM mla_no_math 
@@ -71,7 +70,7 @@ SELECT distinct  pid
     order by pid;
     
     
-drop temporary table if exists la_final;
+drop temporary table if exists la_final; -- students ONLY missing language arts
 create temporary table la_final
 SELECT distinct  pid
     FROM mla_no_la 
@@ -79,7 +78,7 @@ SELECT distinct  pid
     order by pid;
 
 
-drop temporary table if exists final;
+drop temporary table if exists final; -- combination of students ONLY missing math, ONLY missing language arts, and missing NEITHER (no overlap)
 create temporary table final
 select * from la_final
 group by la_final.pid

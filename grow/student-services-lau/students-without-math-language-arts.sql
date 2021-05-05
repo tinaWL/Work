@@ -7,7 +7,7 @@ BEGIN
 drop temporary table if exists mla_all;
 create temporary table mla_all 
 
-SELECT distinct e.personid as 'pid', pr.programid as 'prid'
+SELECT distinct e.personid as 'pid', pr.programid as 'prid', cf.filecount as 'LP'
     FROM person p 
     JOIN enrollment e USING (personid)
     JOIN `user` u ON u.userid=e.personid 
@@ -22,6 +22,11 @@ SELECT distinct e.personid as 'pid', pr.programid as 'prid'
     JOIN studentdebit sd USING (studentdebitid)
     LEFT JOIN thirdpartypayerengagement tppe USING (tppengagementid)
     LEFT JOIN thirdpartypayer tpp ON tpp.TPPayerID=tppe.TPPayerID
+     LEFT JOIN (
+        SELECT pf.personid, COUNT(pf.person_fileid) AS 'FileCount'
+        FROM person_file pf 
+        WHERE pf.is_confidential=1
+        GROUP BY pf.personid) AS cf ON cf.personid=p.personid
 
 WHERE s.semesterid = 44 AND e.credithours > 0 AND e.statusid = 1 AND h.begindate < DATE(NOW()) AND tpp.TPPayerID = 12612
 order by pid;

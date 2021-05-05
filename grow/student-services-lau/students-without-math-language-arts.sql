@@ -27,15 +27,15 @@ WHERE s.semesterid = 44 AND e.credithours > 0 AND e.statusid = 1 AND h.begindate
 order by pid;
         
 
-drop temporary table if exists mla_yes;
-create temporary table mla_yes
+drop temporary table if exists mla_both;
+create temporary table mla_both
 SELECT distinct ma.pid as 'pid', ma.prid
     FROM mla_all ma 
     where ma.prid in(2,5,18,20)
 order by pid;
 
     
-select * from mla_all where pid not in (select pid from mla_yes)
+select * from mla_all where pid not in (select pid from mla_both)
 group by pid;
 end $$
 DELIMITER ;

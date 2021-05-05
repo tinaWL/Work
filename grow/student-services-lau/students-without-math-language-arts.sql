@@ -94,7 +94,7 @@ UNION
 select * from mla_neither
 group by mla_neither.pid;
 
-select * from mla_all ma
+select f.pid as 'student id', ma.lp as '504/IEP' from mla_all ma
 left join final f on ma.pid = f.pid
 group by f.pid;
 

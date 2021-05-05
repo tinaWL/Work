@@ -79,6 +79,8 @@ SELECT distinct  pid
     order by pid;
 
 
+drop temporary table if exists final;
+create temporary table final
 select * from la_final
 group by la_final.pid
 
@@ -91,6 +93,8 @@ UNION
 
 select * from mla_neither
 group by mla_neither.pid;
+
+select * from final;
 /*drop temporary table if exists mla_none;
 create temporary table mla_none
 SELECT distinct ma.pid as 'pid', ma.prid as 'prid'

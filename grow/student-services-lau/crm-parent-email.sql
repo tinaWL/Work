@@ -93,14 +93,14 @@ UNION
 select * from mla_neither
 group by mla_neither.pid;
 
-select p1.name, p2.email-- , f.pid as 'student id'-- , p.firstname-- , ma.lp as '504/IEP' 
+select p1.ParentID, p1.name, p2.parentID, p2.name , f.pid as 'student id' , p.firstname-- , ma.lp as '504/IEP' 
 from mla_all ma
 left join final f on ma.pid = f.pid
 join person p on p.personid = f.pid
 
 -- get first parent
 LEFT JOIN ( 
-    SELECT MIN(p.personid), pr.secondpersonid, CONCAT(p.lastname, ', ', p.firstname) AS 'Name', p.email, IFNULL(p.mobilephone, IFNULL(p.phone, p.altphone)) AS 'Phone'
+    SELECT MIN(p.personid) as 'ParentID', pr.secondpersonid, CONCAT(p.lastname, ', ', p.firstname) AS 'Name'
     FROM person p 
     JOIN person_relation pr ON pr.firstpersonid=p.personid AND pr.relationtype='Parent'
     WHERE IFNULL(p.sex, 'Female') = 'Female'
@@ -108,13 +108,13 @@ LEFT JOIN (
 
 -- Get second parent
 LEFT JOIN (
-    SELECT MIN(p.personid), pr.secondpersonid, CONCAT(p.lastname, ', ', p.firstname) AS 'Name', p.email, IFNULL(p.mobilephone, IFNULL(p.phone, p.altphone)) AS 'Phone'
+    SELECT MIN(p.personid) as 'ParentID', pr.secondpersonid, CONCAT(p.lastname, ', ', p.firstname) AS 'Name', p.email, IFNULL(p.mobilephone, IFNULL(p.phone, p.altphone)) AS 'Phone'
     FROM person p 
     JOIN person_relation pr ON pr.firstpersonid=p.personid AND pr.relationtype='Parent'
     WHERE IFNULL(p.sex, 'Female') = 'Male'
     GROUP BY pr.secondpersonid) AS p2 ON p2.secondpersonid=p.personid 
 
-group by p1.name
+group by f.pid
 order by p1.name;
 /*drop temporary table if exists mla_none;
 create temporary table mla_none

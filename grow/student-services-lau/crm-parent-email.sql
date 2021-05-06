@@ -1,9 +1,3 @@
-DELIMITER $$
-DROP PROCEDURE IF EXISTS sp_test_math_la$$
-CREATE PROCEDURE sp_test_math_la()
-
-BEGIN
-
 DROP TEMPORARY TABLE IF EXISTS mla_all;
 CREATE TEMPORARY TABLE IF NOT EXISTS mla_all 
 
@@ -15,7 +9,7 @@ SELECT DISTINCT  e.programid AS 'prid', e.personid AS 'pid'
     LEFT JOIN thirdpartypayerengagement tppe USING (tppengagementid)
     LEFT JOIN thirdpartypayer tpp ON tpp.TPPayerID=tppe.TPPayerID
 
-WHERE s.semesterid >= 46 AND e.credithours > 0 AND e.statusid = 1  AND tpp.TPPayerID = 12612 
+WHERE s.semesterid >= @futuresem AND e.credithours > 0 AND e.statusid = 1  AND tpp.TPPayerID = 12612 
 order by pid;
         
 
@@ -91,8 +85,3 @@ LEFT JOIN `person` pg ON pg.personid=pr.firstpersonid
 LEFT JOIN externalactivity ea ON ea.RecipientPersonID=pg.personid AND ea.ExternalID = 13312
 WHERE ea.ExternalActivityID IS NULL 
 order by p.lastname;
-
-END $$
-DELIMITER ;
-
-CALL sp_test_math_la();

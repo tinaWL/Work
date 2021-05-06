@@ -5,7 +5,7 @@ SELECT e.personid, p.lastname, p.firstname,
 (CASE 
 WHEN l.locationname = 'Logan ILC' THEN 1111
 WHEN l.locationname = 'Ogden ILC' THEN 2222
-WHEN l.locationname = 'Pleasant Grove ILC' THEN 3333
+WHEN l.locationname = 'Pleasant Grove ILC' THEN 13302
 
 END) AS 'Email Template', l.locationname
 
@@ -28,7 +28,7 @@ SELECT pg.personid, pg.lastname, pg.firstname,
 (CASE 
 WHEN l.locationname = 'Logan ILC' THEN 1111
 WHEN l.locationname = 'Ogden ILC' THEN 2222
-WHEN l.locationname = 'Pleasant Grove ILC' THEN 3333
+WHEN l.locationname = 'Pleasant Grove ILC' THEN 13302
 
 END) AS 'Email Template', l.locationname
 

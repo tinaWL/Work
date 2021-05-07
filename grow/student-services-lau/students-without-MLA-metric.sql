@@ -4,7 +4,7 @@ CREATE PROCEDURE sp_LAU_Math_LA_non_enrollments()
 
 /*
 * DESCRIPTION: List of all LAU students who are not enrolled in a) Math, b) Language Arts, or c) Both and also don't have 504/IEPs
-* COLUMNS: Student ID, Student Name, Grade Year, Missing Enrollments, Current Semester Abbreviation
+* COLUMNS: Student ID, Student Name, Grade Year, Missing Enrollments
 * SEMESTER AWARE: Yes
 */
 
@@ -13,7 +13,6 @@ BEGIN
 -- Semester aware setup
 DECLARE _CurrentSemesterID          INT;  -- current semester to get a baseline
 DECLARE _CurrentSemesterName VARCHAR(3);  -- determine whether current semester is Fall, Winter, or Summer
-DECLARE _CurrentSemesterAbbrv VARCHAR(3);
 
 
 -- get current SemesterID, or next SemesterID when between semesters
@@ -23,7 +22,6 @@ SET _CurrentSemesterID   = (SELECT MAX(semesterid) FROM semester
 
 SET _CurrentSemesterName = (SELECT LEFT(semestername, 1) FROM semester WHERE semesterid = _CurrentSemesterID);
 SET _CurrentSemesterID = IF(_CurrentSemesterName = 'S', _CurrentSemesterID + 1, _CurrentSemesterID); -- skip Summer semester
-SET _CurrentSemesterAbbrv = (SELECT CONCAT(RIGHT(semestername, 2), LEFT(semestername, 1)) FROM semester WHERE semesterid = _CurrentSemesterID);
 
 
 -- All current LAU enrollments
@@ -108,7 +106,7 @@ GROUP BY mla_neither.pid;
 
 	
 -- Final output for the metric 
-SELECT DISTINCT f.pid, concat(p.lastname, ', ', p.firstname) as 'Name',  sgy.StudentGradeYear as 'Grade',f.missing as 'MissingEnrollments', _CurrentSemesterAbbrv -- to display on metric, so sem. name is automatically updated
+SELECT DISTINCT f.pid, concat(p.lastname, ', ', p.firstname) as 'Name',  sgy.StudentGradeYear as 'Grade',f.missing as 'MissingEnrollments'
 FROM final f
 JOIN person p on p.personid = f.pid
 LEFT JOIN ( -- 504/IEP info 

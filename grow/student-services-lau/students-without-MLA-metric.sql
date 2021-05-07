@@ -3,7 +3,7 @@ DROP PROCEDURE IF EXISTS sp_LAU_Math_LA_non_enrollments$$
 CREATE PROCEDURE sp_LAU_Math_LA_non_enrollments()
 
 /*
-* DESCRIPTION: List of all LAU students who are not enrolled in a) Math, b) Language Arts, or c) Both
+* DESCRIPTION: List of all LAU students who are not enrolled in a) Math, b) Language Arts, or c) Both and also don't have 504/IEPs
 * COLUMNS: Student ID, Student Name, Grade Year, Missing Enrollments, Current Semester Abbreviation
 * SEMESTER AWARE: Yes
 */

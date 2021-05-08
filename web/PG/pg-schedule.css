@@ -1,0 +1,36 @@
+.title-block{
+  color:white;
+  background:	#3B84B6;
+  font-weight:bold;
+  text-align:center;
+  padding:5px;
+}
+
+#pg{
+  font-size:250%;
+}
+
+.ms-hs{
+  font-weight:bold;
+  font-size:140%;
+  text-align:center;
+  padding:10px;
+}
+.time{
+  font-weight:bold;
+  text-align:left;
+  padding: 10px;
+  background-color:red;
+  color:white;
+}
+
+.class{
+  background-color:#C3DDEB;
+  padding-left:20px;
+  padding-right:20px;
+  text-align:center;
+}
+
+.placeholder{
+  padding:15px;
+}

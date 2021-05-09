@@ -1,4 +1,3 @@
-  
 DELIMITER $$
 DROP PROCEDURE IF EXISTS pepve$$
 CREATE PROCEDURE pepve()
@@ -135,40 +134,24 @@ ORDER BY sid, id;
 */
 
 
+INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)
+SELECT pr.firstpersonid, 'InfusionSoft_Email', 1111, r.fname, r.semabbrv, NOW()
+	FROM res r 
+    LEFT JOIN person_relation pr ON pr.secondpersonid = r.id AND pr.deleted IS NULL
+GROUP BY r.id, r.sid
+ORDER BY r.semabbrv;
 
-SELECT * from externalactivity ea 
-where ea.ExternalID = 13318;
--- DROP TEMPORARY TABLE IF EXISTS er_records;
--- CREATE TEMPORARY TABLE IF NOT EXISTS re_records
--- INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)
-/*SELECT pr.firstpersonid, 'InfusionSoft_Email',  1111, r.fname, r.semabbrv, NOW(), ea.ExternalActivityID
-	FROM res r
-    JOIN person_relation pr on r.id = pr.secondpersonid AND pr.deleted IS NULL
-    JOIN externalactivity ea on ea.RecipientPersonID = pr.firstpersonid AND ea.CreatedDate BETWEEN NOW() AND DATE_SUB(NOW(), INTERVAL 1 DAY);
-  --   LEFT JOIN externalactivity ea ON ea.RecipientPersonID=pr.firstpersonid and ea.ExternalID in(13318,13320) and ea.CustomField01 = r.fname and ea.CustomField02 = r.semabbrv;
-    
-    -- IF(ea.SuccessDate IS NULL, 13318, 13320),
-    --  AND (ea.ExternalActivityID IS NULL OR ea.ExternalID = 13318);
-   --  (CURDATE() = DATE_ADD(ea.successdate, interval 7 day) AND ea.ExternalID = 13318);*/
 
-/*INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)
-SELECT p.personid, 'InfusionSoft_Email', IF(ea.SuccessDate IS NULL, 13318, 13320), r.fname, r.semabbrv, NOW()
-	FROM res r
-    LEFT JOIN person_relation pr on pr.secondpersonid = r.id AND pr.deleted IS NULL
-    LEFT JOIN person p on p.personid = pr.firstpersonid
-    LEFT JOIN externalactivity ea ON ea.RecipientPersonID=p.personid and ea.ExternalID in(13318,13320);
-    WHERE ea.ExternalActivityID is null;
-    --  AND (ea.ExternalActivityID IS NULL OR ea.ExternalID = 13318);
-   --  (CURDATE() = DATE_ADD(ea.successdate, interval 7 day) AND ea.ExternalID = 13318);*/
+
     
     
 
-/*SELECT r.id, concat(r.lname, ', ', r.fname), r.class, p.personid, concat(p.lastname, ', ',p.firstname), r.sid, r.semabbrv from res r
+/*SELECT r.id, concat(r.lname, ', ', r.fname), r.class, pr.firstpersonid, concat(p.lastname, ', ',p.firstname), r.sid, r.semabbrv from res r
 LEFT JOIN `person_relation` pr ON pr.secondpersonid=r.id AND pr.deleted IS NULL 
 LEFT JOIN `person` p ON p.personid=pr.firstpersonid
 group by r.id, r.sid
 order by r.semabbrv
-;*/ -- for testing
+; -- for testing*/
 
 
 END$$

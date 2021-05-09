@@ -56,3 +56,29 @@ WHERE dee.scheduledesc LIKE "%LAU Funded%" AND eee.statusid =1 AND mee.semesteri
 
 
 ORDER BY `lastname` ASC
+
+--------
+
+--- ALL LAU STUDENTS ENROLLED IN ILC ELECTIVE BLOCKS
+DROP TEMPORARY TABLE IF EXISTS LAU_ILC;
+CREATE TEMPORARY TABLE IF NOT EXISTS LAU_ILC
+SELECT e.personid, p.lastname, p.firstname, 
+(SELECT CASE
+	WHEN s.classid IN(203,204,205,206) THEN 'ILC Block'
+    WHEN s.classid = 251 THEN 'Debate I'
+    WHEN s.classid = 439 THEN 'Debate II'
+    WHEN s.classid = 711 THEN 'OA'
+    WHEN s.classid = 784 THEN 'MS Debate'
+    WHEN s.classid = 868 THEN 'LEMI'
+    ELSE '????????'
+    END) AS 'class'
+FROM person p    
+JOIN enrollment e USING (personid)        
+JOIN section s USING (sectionid)
+Join schedule h on h.sectionid = s.sectionid
+JOIN semester m USING (semesterid)
+JOIN enrollmenttostudentdebit esd USING (enrollmentid)    
+JOIN studentdebit sd USING (studentdebitid)    
+JOIN thirdpartypayerengagement tppe USING (tppengagementid)
+WHERE s.classid in(203,204,205,206) AND e.statusid =1 AND s.semesterid IN(46,47) and tppe.TPPayerID = 12612  
+GROUP BY e.personid;

@@ -29,7 +29,7 @@ SELECT  e.personid AS 'id', p.lastname AS 'lname', p.firstname AS 'fname', s.cla
 	    WHEN s.classid = 784 THEN 'MS Debate'
 	    WHEN s.classid = 868 THEN 'LEMI'
 	    ELSE '????????' -- testing
-        END) AS 'class'
+        END) AS 'class', m.semesterid as 'sid'
 	FROM person p    
 	JOIN enrollment e USING (personid)        
 	JOIN section s USING (sectionid)
@@ -38,7 +38,7 @@ SELECT  e.personid AS 'id', p.lastname AS 'lname', p.firstname AS 'fname', s.cla
 	JOIN enrollmenttostudentdebit esd USING (enrollmentid)    
 	JOIN studentdebit sd USING (studentdebitid)    
 	JOIN thirdpartypayerengagement tppe USING (tppengagementid)
-WHERE s.classid in(251,439,711,784,868,203,204,205,206) AND e.statusid =1 AND s.semesterid =46 and tppe.TPPayerID = 12612
+WHERE s.classid in(251,439,711,784,868,203,204,205,206) AND e.statusid =1 AND s.semesterid in(46,47) and tppe.TPPayerID = 12612
 
 UNION
 
@@ -46,7 +46,7 @@ UNION
 * LAU Students enrolled in any "LAU Funded..." courses
 * Section IDs 36515,36517,3651 are all WL IS Electives
 */
-SELECT e.personid AS 'id', p.lastname AS 'lname', p.firstname AS 'fname',  s.classid AS 'classid', dee.scheduledesc AS 'class'
+SELECT e.personid AS 'id', p.lastname AS 'lname', p.firstname AS 'fname',  s.classid AS 'classid', dee.scheduledesc AS 'class', m.semesterid as 'sid'
 	FROM enrollment e
 	JOIN person p on p.personid = e.personid
 	JOIN section s USING (sectionid)
@@ -56,7 +56,7 @@ SELECT e.personid AS 'id', p.lastname AS 'lname', p.firstname AS 'fname',  s.cla
 	JOIN enrollmenttostudentdebit esd USING (enrollmentid)    
 	JOIN studentdebit sd USING (studentdebitid)    
 	JOIN thirdpartypayerengagement tppe USING (tppengagementid)
-WHERE dee.scheduledesc LIKE "%LAU Funded%" AND e.statusid = 1 AND m.semesterid =46 AND s.sectionid NOT IN(36515,36517,36519) AND tppe.TPPayerID = 12612;
+WHERE dee.scheduledesc LIKE "%LAU Funded%" AND e.statusid = 1 AND m.semesterid IN(46,47) AND s.sectionid NOT IN(36515,36517,36519) AND tppe.TPPayerID = 12612;
 
 
 /*
@@ -66,9 +66,9 @@ WHERE dee.scheduledesc LIKE "%LAU Funded%" AND e.statusid = 1 AND m.semesterid =
 */
 DROP TEMPORARY TABLE IF EXISTS _v_all; 
 CREATE TEMPORARY TABLE IF NOT EXISTS _v_all
-SELECT id AS 'id', lname AS 'lname', fname AS 'fname', class AS 'class' ,  IF(class='ILC BLOCK',2,1) AS 'v'
+SELECT id AS 'id', lname AS 'lname', fname AS 'fname', class AS 'class' ,  IF(class='ILC BLOCK',2,1) AS 'v', sid as 'sid'
 	FROM _all
-GROUP BY id, class
+ GROUP BY id, class, sid
 ORDER BY id;
 
 
@@ -77,10 +77,12 @@ ORDER BY id;
 * All students who are taking more than 3 out 
 * of the 5 permitted electives in a given semester
 */
-SELECT id, lname, fname, class, SUM(v) 
+SELECT id, lname, fname, class, SUM(v), sid
 	FROM _v_all
-GROUP BY id
-HAVING SUM(v) > 3;
+GROUP BY id,sid
+HAVING SUM(v) > 3
+order by sid, id;
+
 
 END$$
 DELIMITER ;

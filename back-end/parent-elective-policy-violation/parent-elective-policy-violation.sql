@@ -64,12 +64,22 @@ SELECT id as 'id', lname as 'lname', fname as 'fname', class as 'class', classid
 	FROM _all 
 WHERE classid IN(203,204,205,206);
 
+DROP TEMPORARY TABLE IF EXISTS n_ilc; -- Students enrolled in electives, but not in blocks 
+CREATE TEMPORARY TABLE IF NOT EXISTS n_ilc
+SELECT  id as 'id', lname as 'lname',fname as 'fname', class as 'class', COUNT(DISTINCT id, class) as 'v'
+	FROM _all 
+WHERE id NOT IN(SELECT id FROM _ilc)
+GROUP BY id
+HAVING COUNT(DISTINCT id, class) > 3
+order by id;
 
 /*
-* ILC students with an elective policy violation 
+* ILC elective block students with an elective policy violation 
 * (ILC blocks count x2, so this calculation is done separately)
 */
-SELECT i.id, i.lname, i.fname, a.class, COUNT(DISTINCT i.id, a.class)
+DROP TEMPORARY TABLE IF EXISTS v_block;
+CREATE TEMPORARY TABLE IF NOT EXISTS v_block
+SELECT i.id as 'id', i.lname as 'lname', i.fname as 'fname', a.class as 'class', COUNT(DISTINCT i.id, a.class) as 'v'
 	FROM _ilc i
 	JOIN _all a ON a.id = i.id
     WHERE a.classid NOT IN(203,204,205,206) -- don't count enrollments in ILC blocks
@@ -78,6 +88,19 @@ HAVING COUNT(DISTINCT i.id, a.class) > 1 -- students are allowed 1 additional el
 ORDER BY i.id;
 
 
+DROP TEMPORARY TABLE IF EXISTS _v_all;
+CREATE TEMPORARY TABLE IF NOT EXISTS _v_all
+SELECT id as 'id', lname as 'lname', fname as 'fname', class as 'class' ,v as 'v'
+	FROM n_ilc
+    UNION
+SELECT id as 'id', lname as 'lname', fname as 'fname', class as 'class', v as 'v'
+	FROM v_block;
+
+
+Select a.id, a.lname, a.fname, a.class, v.v 
+from _v_all v
+join _all a on a.id = v.id
+order by a.id;
 
 END$$
 DELIMITER ;

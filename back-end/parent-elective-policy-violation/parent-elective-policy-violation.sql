@@ -58,49 +58,28 @@ JOIN thirdpartypayerengagement tppe USING (tppengagementid)
 WHERE dee.scheduledesc LIKE "%LAU Funded%" AND e.statusid =1 AND m.semesterid =46 AND s.sectionid NOT IN(36515,36517,36519) and tppe.TPPayerID = 12612;
 
 
-DROP TEMPORARY TABLE IF EXISTS _ilc; -- LAU students enrolled in ILC elective blocks
-CREATE TEMPORARY TABLE IF NOT EXISTS _ilc
-SELECT id as 'id', lname as 'lname', fname as 'fname', class as 'class', classid as 'classid'
-	FROM _all 
-WHERE classid IN(203,204,205,206);
-
-DROP TEMPORARY TABLE IF EXISTS n_ilc; -- Students enrolled in electives, but not in blocks 
-CREATE TEMPORARY TABLE IF NOT EXISTS n_ilc
-SELECT  id as 'id', lname as 'lname',fname as 'fname', class as 'class', COUNT(DISTINCT id, class) as 'v'
-	FROM _all 
-WHERE id NOT IN(SELECT id FROM _ilc)
-GROUP BY id
-HAVING COUNT(DISTINCT id, class) > 3
+/*
+* A table of the 'weights' of the classes
+* ILC blocks count as 2
+* Everything else counts as 1
+*/
+DROP TEMPORARY TABLE IF EXISTS _v_all; 
+CREATE TEMPORARY TABLE IF NOT EXISTS _v_all
+SELECT id as 'id', lname as 'lname', fname as 'fname', class as 'class' ,  if(class='ILC BLOCK',2,1) as 'v'
+from _all
+group by id, class
 order by id;
 
+
 /*
-* ILC elective block students with an elective policy violation 
-* (ILC blocks count x2, so this calculation is done separately)
+* RESULT 
+* All students who are taking more than 3 out 
+* of the 5 permitted electives in a given semester
 */
-DROP TEMPORARY TABLE IF EXISTS v_block;
-CREATE TEMPORARY TABLE IF NOT EXISTS v_block
-SELECT i.id as 'id', i.lname as 'lname', i.fname as 'fname', a.class as 'class', COUNT(DISTINCT i.id, a.class) as 'v'
-	FROM _ilc i
-	JOIN _all a ON a.id = i.id
-    WHERE a.classid NOT IN(203,204,205,206) -- don't count enrollments in ILC blocks
-GROUP BY i.id
-HAVING COUNT(DISTINCT i.id, a.class) > 1 -- students are allowed 1 additional elective 
-ORDER BY i.id;
-
-
-DROP TEMPORARY TABLE IF EXISTS _v_all;
-CREATE TEMPORARY TABLE IF NOT EXISTS _v_all
-SELECT id as 'id', lname as 'lname', fname as 'fname', class as 'class' ,v as 'v'
-	FROM n_ilc
-    UNION
-SELECT id as 'id', lname as 'lname', fname as 'fname', class as 'class', v as 'v'
-	FROM v_block;
-
-
-Select a.id, a.lname, a.fname, a.class, v.v 
-from _v_all v
-join _all a on a.id = v.id
-order by a.id;
+SELECT id, lname, fname, class, SUM(v) 
+	FROM _v_all
+GROUP BY id
+HAVING SUM(v) > 3;
 
 END$$
 DELIMITER ;

@@ -113,16 +113,36 @@ SELECT id AS 'id', lname AS 'lname', fname AS 'fname', class AS 'class' ,  IF(cl
 ORDER BY id;
 
 
+
 /*
 * RESULT 
 * All students who are taking more than 3 out 
 * of the 5 permitted electives in a given semester
 */
-SELECT id, lname, fname, class, SUM(v), sid, IF(sid = _FallSemesterID, _FallSemesterAbbrv, _WinterSemesterAbbrv) AS 'SemAbbrv'
-	FROM _v_all
+DROP TEMPORARY TABLE IF EXISTS res;
+CREATE TEMPORARY TABLE IF NOT EXISTS res
+SELECT id as 'id', lname as 'lname', fname as 'fname' ,class as 'class', SUM(v), sid as 'sid', IF(sid = _FallSemesterID, _FallSemesterAbbrv, _WinterSemesterAbbrv) AS 'SemAbbrv'
+	FROM _v_all v
 GROUP BY id,sid
 HAVING SUM(v) > 3
 ORDER BY sid, id;
+
+
+INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)      
+SELECT p.personid, 'InfusionSoft_Email', IF(ea.successdate IS NULL, 13318, 13320), r.fname, r.semabbrv, NOW()
+	FROM res r
+    LEFT JOIN person_relation pr on pr.secondpersonid = r.id AND pr.deleted IS NULL
+    LEFT JOIN person p on p.personid = pr.firstpersonid
+    LEFT JOIN externalactivity ea ON ea.RecipientPersonID=p.personid
+    WHERE ea.externalactivityid IS NULL OR (ea.successdate >= DATE_SUB(NOW(), INTERVAL 7 DAY) AND ea.externalid = 13318);
+
+
+/*SELECT r.id, concat(r.lname, ', ', r.fname), r.class, p.personid, concat(p.lastname, ', ',p.firstname), r.sid, r.semabbrv from res r
+LEFT JOIN `person_relation` pr ON pr.secondpersonid=r.id AND pr.deleted IS NULL 
+LEFT JOIN `person` p ON p.personid=pr.firstpersonid
+group by r.id, r.sid
+order by r.semabbrv
+;*/ -- for testing
 
 
 END$$

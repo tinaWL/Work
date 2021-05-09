@@ -127,15 +127,21 @@ GROUP BY id,sid
 HAVING SUM(v) > 3
 ORDER BY sid, id;
 
-
-INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)      
+/*
+* If the person hasn't yet received this email, they will get template 13318
+* If they successfully received 13318 a week ago but have not taken action,
+* they will receive 12230
+*/
+INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)
 SELECT p.personid, 'InfusionSoft_Email', IF(ea.successdate IS NULL, 13318, 13320), r.fname, r.semabbrv, NOW()
 	FROM res r
     LEFT JOIN person_relation pr on pr.secondpersonid = r.id AND pr.deleted IS NULL
     LEFT JOIN person p on p.personid = pr.firstpersonid
-    LEFT JOIN externalactivity ea ON ea.RecipientPersonID=p.personid
-    WHERE ea.externalactivityid IS NULL OR (ea.successdate >= DATE_SUB(NOW(), INTERVAL 7 DAY) AND ea.externalid = 13318);
-
+    LEFT JOIN externalactivity ea ON ea.RecipientPersonID=p.personid AND  ea.ExternalID = 13318;
+    --  AND (ea.ExternalActivityID IS NULL OR ea.ExternalID = 13318);
+   --  (CURDATE() = DATE_ADD(ea.successdate, interval 7 day) AND ea.ExternalID = 13318);
+    
+    
 
 /*SELECT r.id, concat(r.lname, ', ', r.fname), r.class, p.personid, concat(p.lastname, ', ',p.firstname), r.sid, r.semabbrv from res r
 LEFT JOIN `person_relation` pr ON pr.secondpersonid=r.id AND pr.deleted IS NULL 

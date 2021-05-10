@@ -128,13 +128,9 @@ HAVING SUM(v) > 3
 ORDER BY sid, id;
 
 /*
-* If the person hasn't yet received this email, they will get template 13318
-* If they successfully received 13318 a week ago but have not taken action,
-* they will receive 12230
+* Gathering parent IDs / semeter abbrv. info in one place
+* to be sure it will be the same across both cases
 */
-
-
--- INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)
 DROP TEMPORARY TABLE IF EXISTS info;
 CREATE TEMPORARY TABLE IF NOT EXISTS info
 SELECT pr.firstpersonid as 'pid', 'InfusionSoft_Email', 1111 as 'eid', r.fname as 'fname', r.semabbrv as 'sem', NOW(), r.id as 'rid', r.sid as 'sid'
@@ -143,67 +139,42 @@ SELECT pr.firstpersonid as 'pid', 'InfusionSoft_Email', 1111 as 'eid', r.fname a
 GROUP BY r.id, r.sid
 ORDER BY r.semabbrv;
 
+
+/*
+* First email attempt
+*/
 INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)
 SELECT i.pid, 'InfusionSoft_Email', 13318, i.fname, i.sem, NOW()
 	FROM info i
-    left join externalactivity ea on   ea.recipientpersonid = i.pid and ea.ExternalID = 13318
-    where ea.ExternalActivityID is null
-    group by i.rid, i.sid;
--- select * from info
+    LEFT JOIN externalactivity ea ON ea.recipientpersonid = i.pid AND ea.ExternalID = 13318
+    WHERE ea.ExternalActivityID IS null
+    GROUP BY i.rid, i.sid;
 
 
--- INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)
-/*select i.pid, 'InfusionSoft_Email', IF(date(ea.SuccessDate) = date_sub(curdate(), interval 7 day) AND (ea.externalid = 1111), 13320, NULL) as 'Status',  i.fname, i.sem, NOW()
-from externalactivity ea
-left join info i on i.pid = ea.RecipientPersonID -- res
-where (ea.ExternalID = 13318 and date(ea.SuccessDate) = date_sub(curdate(), interval 7 day))
-group by i.rid, i.sid;*/
-
--- INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)
+/*
+* Setup for the second email attempt - to be sent 1 week after the first 
+* Kept getting a 'command out of sync' error when trying to use WHERE ... IS NULL
+* this is my workaround. If anyone finds a better way, feel free to change
+*/
 DROP TEMPORARY TABLE IF EXISTS _t;
 CREATE TEMPORARY TABLE IF NOT EXISTS _t
-SELECT i.pid as 'pid', 'InfusionSoft_Email', 13320, i.fname as 'fname', i.sem as 'sem', NOW(), ea.CreatedDate as 'cd', i.rid as 'rid', i.sid as 'sid'
+SELECT i.pid as 'pid', 'InfusionSoft_Email', 13320, i.fname as 'fname', i.sem as 'sem', NOW(), ea.CreatedDate AS 'cd', i.rid AS 'rid', i.sid AS 'sid'
 	FROM info i
-    left join externalactivity ea on ea.recipientpersonid = i.pid and ea.ExternalID = 13318 and date(ea.CreatedDate) = date_sub(curdate(), interval 7 day) 
-    where ea.CreatedDate is not null
-    group by i.rid, i.sid;
+    LEFT JOIN externalactivity ea ON ea.recipientpersonid = i.pid AND ea.ExternalID = 13318 AND date(ea.CreatedDate) = date_sub(curdate(), INTERVAL 7 day) 
+    WHERE ea.CreatedDate IS NOT NULL
+    GROUP BY i.rid, i.sid;
     
-    
+
+/*
+* Second email attempt!
+*/
 INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)    
 SELECT t.pid, 'InfusionSoft_Email', 13320, t.fname, t.sem, NOW()
 	FROM _t t
-    left join externalactivity ea on   ea.recipientpersonid = t.pid and ea.ExternalID = 13320
-    where ea.ExternalActivityID is null
-    group by t.rid, t.sid;
--- select * from info 
+    LEFT JOIN externalactivity ea ON ea.recipientpersonid = t.pid AND ea.ExternalID = 13320
+    WHERE ea.ExternalActivityID IS NULL
+    GROUP BY t.rid, t.sid;
 
-
-
-
-
-/*select p.personid, ea.externalid, if(ea.externalid  like "%1111%", '!', '?'), ea.SuccessDate  
-from externalactivity ea
-left join vv v on v.pid = ea.RecipientPersonID -- res
-left join person p on   v.pid = p.personid 
-where v.pid is null or (ea.ExternalID = 1111 and date(ea.SuccessDate) = date_sub(curdate(), interval 7 day))
--- where ea.ExternalID = 1111 and date(successdate) = date_sub(curdate() , interval 7 day)
-group by p.personid;*/
-
-
-/*INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`) VALUES(22365, 'InfusionSoft_Email',13318,'Buz','Tina',NOW());
-INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`) VALUES(22365, 'InfusionSoft_Email',13320,'Buz','Tina',NOW());*/
-
-
-
-    
-    
-
-/*SELECT r.id, concat(r.lname, ', ', r.fname), r.class, pr.firstpersonid, concat(p.lastname, ', ',p.firstname), r.sid, r.semabbrv from res r
-LEFT JOIN `person_relation` pr ON pr.secondpersonid=r.id AND pr.deleted IS NULL 
-LEFT JOIN `person` p ON p.personid=pr.firstpersonid
-group by r.id, r.sid
-order by r.semabbrv
-; -- for testing*/
 
 
 END$$

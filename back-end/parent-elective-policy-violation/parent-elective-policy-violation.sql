@@ -159,6 +159,23 @@ left join info i on i.pid = ea.RecipientPersonID -- res
 where (ea.ExternalID = 13318 and date(ea.SuccessDate) = date_sub(curdate(), interval 7 day))
 group by i.rid, i.sid;*/
 
+-- INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)
+DROP TEMPORARY TABLE IF EXISTS _t;
+CREATE TEMPORARY TABLE IF NOT EXISTS _t
+SELECT i.pid as 'pid', 'InfusionSoft_Email', 13320, i.fname as 'fname', i.sem as 'sem', NOW(), ea.CreatedDate as 'cd', i.rid as 'rid', i.sid as 'sid'
+	FROM info i
+    left join externalactivity ea on ea.recipientpersonid = i.pid and ea.ExternalID = 13318 and date(ea.CreatedDate) = date_sub(curdate(), interval 7 day) 
+    where ea.CreatedDate is not null
+    group by i.rid, i.sid;
+    
+    
+INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)    
+SELECT t.pid, 'InfusionSoft_Email', 13320, t.fname, t.sem, NOW()
+	FROM _t t
+    left join externalactivity ea on   ea.recipientpersonid = t.pid and ea.ExternalID = 13320
+    where ea.ExternalActivityID is null
+    group by t.rid, t.sid;
+-- select * from info 
 
 
 

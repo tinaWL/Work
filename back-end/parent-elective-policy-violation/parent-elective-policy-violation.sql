@@ -1,8 +1,9 @@
 DELIMITER $$
-DROP PROCEDURE IF EXISTS sp_no_math_la$$
-CREATE PROCEDURE sp_no_math_la()
+DROP PROCEDURE IF EXISTS pepve$$
+CREATE PROCEDURE pepve()
 
 BEGIN
+
 
 /*
 * Semester / AY-aware logic
@@ -40,106 +41,158 @@ SET _WinterSemesterID =
     	
 SET _WinterSemesterAbbrv = (SELECT CONCAT(RIGHT(semestername, 2), LEFT(semestername, 1)) FROM semester WHERE semesterid = _WinterSemesterID);
 SET _FallSemesterAbbrv = (SELECT CONCAT(RIGHT(semestername, 2), LEFT(semestername, 1)) FROM semester WHERE semesterid = _FallSemesterID);
-
-DROP TEMPORARY TABLE IF EXISTS mla_all;
-CREATE TEMPORARY TABLE IF NOT EXISTS mla_all 
-
-SELECT DISTINCT  e.programid AS 'prid', e.personid AS 'pid', s.semesterid AS 'sid'
-    FROM enrollment e 
-    JOIN section s USING (sectionid)
-    JOIN enrollmenttostudentdebit esd USING (enrollmentid)
-    JOIN studentdebit sd USING (studentdebitid)
-    LEFT JOIN thirdpartypayerengagement tppe USING (tppengagementid)
-    LEFT JOIN thirdpartypayer tpp ON tpp.TPPayerID=tppe.TPPayerID
-
-WHERE s.semesterid >= _FallSemesterID AND e.credithours > 0 AND e.statusid = 1  AND tpp.TPPayerID = 12612 
-order by pid;
-        
-
-DROP TEMPORARY TABLE IF EXISTS mla_both; -- all students currently enrolled in math and/or language arts classes
-CREATE TEMPORARY TABLE IF NOT EXISTS mla_both
-SELECT DISTINCT  ma.prid AS 'prid', ma.pid AS 'pid', ma.sid AS 'sid'
-    FROM mla_all ma 
-    WHERE ma.prid in(2,5,18,20)
-ORDER BY pid;
+-- for testing purposes only, to verify variables are calculated correctly at different times of the year. Uncomment next row and comment out the entire SELECT beneath it.
+-- SELECT _CurrentSemesterID, _CurrentSemesterName, _WinterSemesterID, _FallSemesterID, _WinterSemesterAbbrv, _FallSemesterAbbrv;
 
 
-DROP TEMPORARY TABLE IF EXISTS mla_no_math; -- students not enrolled in any math class
-CREATE TEMPORARY TABLE IF NOT EXISTS mla_no_math
-SELECT distinct  ma.prid AS 'prid', ma.pid AS 'pid', ma.sid AS 'sid'
-    FROM mla_all ma 
-    WHERE ma.pid NOT IN(SELECT pid FROM mla_both WHERE prid IN(2,18))
-ORDER BY pid;
-
-DROP TEMPORARY TABLE IF EXISTS mla_no_la; -- students not enrolled in any language arts class
-CREATE TEMPORARY TABLE IF NOT EXISTS mla_no_la
-SELECT distinct  ma.prid AS 'prid', ma.pid AS 'pid', ma.sid AS 'sid'
-    FROM mla_all ma 
-    WHERE ma.pid NOT IN(SELECT pid FROM mla_both WHERE prid IN(5,20))
-order by pid;
-
-DROP TEMPORARY TABLE IF EXISTS mla_neither; -- students enrolled in NEITHER math nor language arts 
-CREATE TEMPORARY TABLE IF NOT EXISTS mla_neither
-SELECT DISTINCT ma.pid AS 'pid', ma.sid AS 'sid'
-    FROM mla_all ma 
-    WHERE ma.pid NOT IN(SELECT pid FROM mla_both) 
-ORDER BY pid;
-    
-
-DROP TEMPORARY TABLE IF EXISTS math_final; -- students ONLY missing math
-CREATE TEMPORARY TABLE IF NOT EXISTS math_final
-SELECT DISTINCT pid, sid AS 'sid'
-    FROM mla_no_math 
-    WHERE pid NOT IN(SELECT pid FROM mla_neither) 
-    order by pid;
-    
-    
-DROP TEMPORARY TABLE IF EXISTS la_final; -- students ONLY missing language arts
-CREATE TEMPORARY TABLE IF NOT EXISTS la_final
-SELECT DISTINCT  pid, sid AS 'sid'
-    FROM mla_no_la 
-    WHERE pid NOT IN(SELECT pid FROM mla_neither) 
-ORDER BY pid;
-
-
-DROP TEMPORARY TABLE IF EXISTS final; -- combination of students ONLY missing math, ONLY missing language arts, and missing NEITHER (no overlap)
-CREATE TEMPORARY TABLE IF NOT EXISTS final
-SELECT *, 'Language Arts' AS 'Missing' FROM la_final
-GROUP BY sid,la_final.pid
+/*
+* All LAU students enrolled in ILC elective blocks, OA, Debate, and LAU Funded LEMI
+*
+* CLASS IDS:
+* 203 - 9th Grade Block
+* 204 - 10th Grade Block
+* 205 - 11th Grade Block
+* 206 - 12th Grade Block
+* 251 - Debate I
+* 439 - Debate II
+* 711 - OA
+* 784 - MS Debate
+* 868 - LAU Funded LEMI
+*/
+DROP TEMPORARY TABLE IF EXISTS _all; -- ALL LAU students enrolled in ILC elective blocks, OA, Debate, or LAU Funded courses
+CREATE TEMPORARY TABLE IF NOT EXISTS _all
+SELECT  e.personid AS 'id', p.lastname AS 'lname', p.firstname AS 'fname', s.classid AS 'classid',
+c.classname AS 'class', m.semesterid as 'sid'
+	FROM person p    
+	JOIN enrollment e USING (personid)        
+	JOIN section s USING (sectionid)
+    JOIN class c ON c.classid=s.classid
+	Join schedule h on h.sectionid = s.sectionid
+	JOIN semester m USING (semesterid)
+	JOIN enrollmenttostudentdebit esd USING (enrollmentid)    
+	JOIN studentdebit sd USING (studentdebitid)    
+	JOIN thirdpartypayerengagement tppe USING (tppengagementid)
+WHERE s.classid in(251,439,710,711,784,868,203,204,205,206,200,216,202,726,201) AND e.statusid =1  and e.tpp_approval_status = 'awaiting approval' AND s.semesterid in(_FallSemesterID, _WinterSemesterID) and tppe.TPPayerID = 12612
 
 UNION
 
-SELECT *, 'Math' AS 'Missing' FROM math_final
-group by sid,math_final.pid
-
-UNION
-
-SELECT *, 'Math or Language Arts' AS 'Missing' FROM mla_neither 
-GROUP BY sid,mla_neither.pid;
-
-DROP TEMPORARY TABLE IF EXISTS setup; -- combination of students ONLY missing math, ONLY missing language arts, and missing NEITHER (no overlap)
-CREATE TEMPORARY TABLE IF NOT EXISTS setup	
-SELECT DISTINCT pr.firstpersonid AS 'pid', p.firstname as 'fname', CONCAT(f.missing, ' for ',IF(sid = _FallSemesterID, _FallSemesterAbbrv, _WinterSemesterAbbrv)) AS 'SA'
-FROM final f
-JOIN person p on p.personid = f.pid
-LEFT JOIN person_relation pr ON pr.secondpersonid = f.pid AND pr.deleted IS NULL
-LEFT JOIN externalactivity ea on ea.RecipientPersonID = pr.firstpersonid
-LEFT JOIN ( -- 504/IEP info
-        SELECT pf.personid, COUNT(pf.person_fileid) AS 'FileCount'
-        FROM person_file pf 
-        WHERE pf.is_confidential=1
-        GROUP BY pf.personid) AS cf ON cf.personid=p.personid
-WHERE cf.FileCount IS NULL 
-order by sid;
+/*
+* LAU Students enrolled in any "LAU Funded..." courses
+* Section IDs 36515,36517,3651 are all WL IS Electives
+*/
+SELECT e.personid AS 'id', p.lastname AS 'lname', p.firstname AS 'fname',  s.classid AS 'classid', c.classname AS 'class', m.semesterid AS 'sid'
+	FROM enrollment e
+	JOIN person p on p.personid = e.personid
+	JOIN section s USING (sectionid)
+	JOIN semester m ON m.semesterid=s.semesterid
+	JOIN `schedule` dee ON dee.sectionid=s.sectionid 
+	JOIN class c ON c.classid=s.classid
+	JOIN enrollmenttostudentdebit esd USING (enrollmentid)    
+	JOIN studentdebit sd USING (studentdebitid)    
+	JOIN thirdpartypayerengagement tppe USING (tppengagementid)
+WHERE dee.scheduledesc LIKE "%LAU Funded%" and dee.scheduledesc not like "%NOT LAU%" AND e.statusid =1 AND e.tpp_approval_status = 'awaiting approval' AND m.semesterid IN(_FallSemesterID,_WinterSemesterID) AND s.sectionid NOT IN(36515,36517,36519) AND tppe.TPPayerID = 12612;
 
 
-INSERT INTO externalactivity(`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`, `CustomField02`,`CreatedDate`) 
-SELECT DISTINCT s.pid, 'InfusionSoft_Email', 13312, s.fname, s.sa, NOW()
-FROM setup s
-LEFT JOIN externalactivity ea ON ea.RecipientPersonID = s.pid AND ea.ExternalID = 13312
-WHERE ea.ExternalActivityID IS NULL;
+/*
+* A table of the 'weights' of the classes
+* ILC blocks count as 2
+* Everything else counts as 1
+*/
+DROP TEMPORARY TABLE IF EXISTS _v_all; 
+CREATE TEMPORARY TABLE IF NOT EXISTS _v_all
+SELECT id AS 'id', lname AS 'lname', fname AS 'fname', class AS 'class' ,  IF(class like "%block%",2,1) AS 'v', sid AS 'sid'
+	FROM _all
+ GROUP BY id, class, sid
+ORDER BY id;
 
-END $$
+
+
+/*
+* RESULT 
+* All students who are taking more than 3 out 
+* of the 5 permitted electives in a given semester
+*/
+DROP TEMPORARY TABLE IF EXISTS res;
+CREATE TEMPORARY TABLE IF NOT EXISTS res
+SELECT id as 'id', lname as 'lname', fname as 'fname' ,class as 'class', SUM(v), sid as 'sid', IF(sid = _FallSemesterID, _FallSemesterAbbrv, _WinterSemesterAbbrv) AS 'SemAbbrv'
+	FROM _v_all v
+GROUP BY id,sid
+HAVING SUM(v) > 3
+ORDER BY sid, id;
+
+/*
+* Gathering parent IDs / semeter abbrv. info in one place
+* to be sure it will be the same across both cases
+*/
+DROP TEMPORARY TABLE IF EXISTS info;
+CREATE TEMPORARY TABLE IF NOT EXISTS info
+SELECT pr.firstpersonid as 'pid', p.firstname, p.lastname, p.email, r.fname as 'fname', r.semabbrv as 'sem', r.id as 'rid', r.sid as 'sid'
+	FROM res r 
+    LEFT JOIN person_relation pr ON pr.secondpersonid = r.id AND pr.deleted IS NULL
+    join person p on p.personid = pr.firstpersonid
+GROUP BY r.id, r.sid
+ORDER BY r.semabbrv;
+
+
+/*
+* First email attempt for parents 
+*/
+INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)
+SELECT i.pid, 'InfusionSoft_Email', 13318, i.fname, i.sem, NOW()
+	FROM info i
+    LEFT JOIN externalactivity ea ON ea.recipientpersonid = i.pid AND ea.ExternalID = 13318
+    WHERE ea.ExternalActivityID IS null
+    GROUP BY i.rid, i.sid;
+    
+/*
+* First email attempt for students 
+*/
+INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)
+SELECT i.rid, 'InfusionSoft_Email', 13318, i.fname, i.sem, NOW()
+	FROM info i
+    LEFT JOIN externalactivity ea ON ea.recipientpersonid = i.pid AND ea.ExternalID = 13318
+    WHERE ea.ExternalActivityID IS null
+    GROUP BY i.rid, i.sid;
+
+
+
+/*
+* Setup for the second email attempt - to be sent 1 week after the first 
+* Kept getting a 'command out of sync' error when trying to use WHERE ... IS NULL
+* this is my workaround. If anyone finds a better way, feel free to change
+*/
+DROP TEMPORARY TABLE IF EXISTS _t;
+CREATE TEMPORARY TABLE IF NOT EXISTS _t
+SELECT i.pid as 'pid', 'InfusionSoft_Email', 13320, i.fname as 'fname', i.sem as 'sem', NOW(), ea.CreatedDate AS 'cd', i.rid AS 'rid', i.sid AS 'sid'
+	FROM info i
+    LEFT JOIN externalactivity ea ON ea.recipientpersonid = i.pid AND ea.ExternalID = 13318 AND date(ea.CreatedDate) = date_sub(curdate(), INTERVAL 7 day) 
+    WHERE ea.CreatedDate IS NOT NULL
+    GROUP BY i.rid, i.sid;
+    
+
+/*
+* Second email attempt! - parents
+*/
+INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)    
+SELECT t.pid, 'InfusionSoft_Email', 13320, t.fname, t.sem, NOW()
+	FROM _t t
+    LEFT JOIN externalactivity ea ON ea.recipientpersonid = t.pid AND ea.ExternalID = 13320
+    WHERE ea.ExternalActivityID IS NULL
+    GROUP BY t.rid, t.sid;
+    
+    
+/*
+* Second email attempt! - parents
+*/
+INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)    
+SELECT t.rid, 'InfusionSoft_Email', 13320, t.fname, t.sem, NOW()
+	FROM _t t
+    LEFT JOIN externalactivity ea ON ea.recipientpersonid = t.pid AND ea.ExternalID = 13320
+    WHERE ea.ExternalActivityID IS NULL
+    GROUP BY t.rid, t.sid;
+
+
+
+END$$
 DELIMITER ;
-
-CALL sp_no_math_la();
+CALL pepve();

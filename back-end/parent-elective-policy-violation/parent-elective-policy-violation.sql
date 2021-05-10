@@ -143,20 +143,23 @@ SELECT pr.firstpersonid as 'pid', 'InfusionSoft_Email', 1111 as 'eid', r.fname a
 GROUP BY r.id, r.sid
 ORDER BY r.semabbrv;
 
+INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)
+SELECT i.pid, 'InfusionSoft_Email', 13318, i.fname, i.sem, NOW()
+	FROM info i
+    join externalactivity ea on i.pid = ea.recipientpersonid
+    where ea.externalactivityid is null;
+ -- select * from info;
 
--- select * from info;
 
-select p.personid, ea.externalid, 
-	CASE
-    	WHEN date(ea.SuccessDate) = date_sub(curdate(), interval 7 day) AND (ea.externalid = 1111) THEN 13320
-        WHEN p.personid IS NULL THEN 0
-        ELSE 13318
-        END AS 'Status',  ea.SuccessDate, ea.CreatedDate
+-- INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)
+/*select i.pid, 'InfusionSoft_Email', IF(date(ea.SuccessDate) = date_sub(curdate(), interval 7 day) AND (ea.externalid = 1111), 13320, NULL) as 'Status',  i.fname, i.sem, NOW()
 from externalactivity ea
 left join info i on i.pid = ea.RecipientPersonID -- res
-left join person p on  i.pid=  p.personid  
-where ea.ExternalID = 1111 or date(ea.SuccessDate) = date_sub(curdate(), interval 7 day)
-group by i.pid, i.sid, i.rid;
+where ea.ExternalID = 1111 and date(ea.SuccessDate) = date_sub(curdate(), interval 7 day)
+group by i.rid, i.sid;*/
+
+
+
 
 
 

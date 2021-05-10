@@ -62,24 +62,17 @@ SET _FallSemesterAbbrv = (SELECT CONCAT(RIGHT(semestername, 2), LEFT(semesternam
 DROP TEMPORARY TABLE IF EXISTS _all; -- ALL LAU students enrolled in ILC elective blocks, OA, Debate, or LAU Funded courses
 CREATE TEMPORARY TABLE IF NOT EXISTS _all
 SELECT  e.personid AS 'id', p.lastname AS 'lname', p.firstname AS 'fname', s.classid AS 'classid',
-(SELECT CASE
-	    WHEN s.classid IN(203,204,205,206) THEN 'ILC Block'
-	    WHEN s.classid = 251 THEN 'Debate I'
-	    WHEN s.classid = 439 THEN 'Debate II'
-	    WHEN s.classid = 711 THEN 'OA'
-	    WHEN s.classid = 784 THEN 'MS Debate'
-	    WHEN s.classid = 868 THEN 'LEMI'
-	    ELSE '????????' -- testing
-        END) AS 'class', m.semesterid as 'sid'
+c.classname AS 'class', m.semesterid as 'sid'
 	FROM person p    
 	JOIN enrollment e USING (personid)        
 	JOIN section s USING (sectionid)
+    JOIN class c ON c.classid=s.classid
 	Join schedule h on h.sectionid = s.sectionid
 	JOIN semester m USING (semesterid)
 	JOIN enrollmenttostudentdebit esd USING (enrollmentid)    
 	JOIN studentdebit sd USING (studentdebitid)    
 	JOIN thirdpartypayerengagement tppe USING (tppengagementid)
-WHERE s.classid in(251,439,711,784,868,203,204,205,206) AND e.statusid =1 AND s.semesterid in(_FallSemesterID, _WinterSemesterID) and tppe.TPPayerID = 12612
+WHERE s.classid in(251,439,710,711,784,868,203,204,205,206,200,216,202,726,201) AND e.statusid =1  and e.tpp_approval_status = 'awaiting approval' AND s.semesterid in(_FallSemesterID, _WinterSemesterID) and tppe.TPPayerID = 12612
 
 UNION
 
@@ -87,7 +80,7 @@ UNION
 * LAU Students enrolled in any "LAU Funded..." courses
 * Section IDs 36515,36517,3651 are all WL IS Electives
 */
-SELECT e.personid AS 'id', p.lastname AS 'lname', p.firstname AS 'fname',  s.classid AS 'classid', dee.scheduledesc AS 'class', m.semesterid AS 'sid'
+SELECT e.personid AS 'id', p.lastname AS 'lname', p.firstname AS 'fname',  s.classid AS 'classid', c.classname AS 'class', m.semesterid AS 'sid'
 	FROM enrollment e
 	JOIN person p on p.personid = e.personid
 	JOIN section s USING (sectionid)
@@ -97,7 +90,7 @@ SELECT e.personid AS 'id', p.lastname AS 'lname', p.firstname AS 'fname',  s.cla
 	JOIN enrollmenttostudentdebit esd USING (enrollmentid)    
 	JOIN studentdebit sd USING (studentdebitid)    
 	JOIN thirdpartypayerengagement tppe USING (tppengagementid)
-WHERE dee.scheduledesc LIKE "%LAU Funded%" AND e.statusid = 1 AND m.semesterid IN(_FallSemesterID,_WinterSemesterID) AND s.sectionid NOT IN(36515,36517,36519) AND tppe.TPPayerID = 12612;
+WHERE dee.scheduledesc LIKE "%LAU Funded%" and dee.scheduledesc not like "%NOT LAU%" AND e.statusid =1 AND e.tpp_approval_status = 'awaiting approval' AND m.semesterid IN(_FallSemesterID,_WinterSemesterID) AND s.sectionid NOT IN(36515,36517,36519) AND tppe.TPPayerID = 12612;
 
 
 /*
@@ -107,7 +100,7 @@ WHERE dee.scheduledesc LIKE "%LAU Funded%" AND e.statusid = 1 AND m.semesterid I
 */
 DROP TEMPORARY TABLE IF EXISTS _v_all; 
 CREATE TEMPORARY TABLE IF NOT EXISTS _v_all
-SELECT id AS 'id', lname AS 'lname', fname AS 'fname', class AS 'class' ,  IF(class='ILC BLOCK',2,1) AS 'v', sid AS 'sid'
+SELECT id AS 'id', lname AS 'lname', fname AS 'fname', class AS 'class' ,  IF(class like "%block%",2,1) AS 'v', sid AS 'sid'
 	FROM _all
  GROUP BY id, class, sid
 ORDER BY id;
@@ -133,15 +126,16 @@ ORDER BY sid, id;
 */
 DROP TEMPORARY TABLE IF EXISTS info;
 CREATE TEMPORARY TABLE IF NOT EXISTS info
-SELECT pr.firstpersonid as 'pid', 'InfusionSoft_Email', 1111 as 'eid', r.fname as 'fname', r.semabbrv as 'sem', NOW(), r.id as 'rid', r.sid as 'sid'
+SELECT pr.firstpersonid as 'pid', p.firstname, p.lastname, p.email, r.fname as 'fname', r.semabbrv as 'sem', r.id as 'rid', r.sid as 'sid'
 	FROM res r 
     LEFT JOIN person_relation pr ON pr.secondpersonid = r.id AND pr.deleted IS NULL
+    join person p on p.personid = pr.firstpersonid
 GROUP BY r.id, r.sid
 ORDER BY r.semabbrv;
 
 
 /*
-* First email attempt
+* First email attempt for parents 
 */
 INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)
 SELECT i.pid, 'InfusionSoft_Email', 13318, i.fname, i.sem, NOW()
@@ -149,6 +143,17 @@ SELECT i.pid, 'InfusionSoft_Email', 13318, i.fname, i.sem, NOW()
     LEFT JOIN externalactivity ea ON ea.recipientpersonid = i.pid AND ea.ExternalID = 13318
     WHERE ea.ExternalActivityID IS null
     GROUP BY i.rid, i.sid;
+    
+/*
+* First email attempt for students 
+*/
+INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)
+SELECT i.rid, 'InfusionSoft_Email', 13318, i.fname, i.sem, NOW()
+	FROM info i
+    LEFT JOIN externalactivity ea ON ea.recipientpersonid = i.pid AND ea.ExternalID = 13318
+    WHERE ea.ExternalActivityID IS null
+    GROUP BY i.rid, i.sid;
+
 
 
 /*
@@ -166,10 +171,21 @@ SELECT i.pid as 'pid', 'InfusionSoft_Email', 13320, i.fname as 'fname', i.sem as
     
 
 /*
-* Second email attempt!
+* Second email attempt! - parents
 */
 INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)    
 SELECT t.pid, 'InfusionSoft_Email', 13320, t.fname, t.sem, NOW()
+	FROM _t t
+    LEFT JOIN externalactivity ea ON ea.recipientpersonid = t.pid AND ea.ExternalID = 13320
+    WHERE ea.ExternalActivityID IS NULL
+    GROUP BY t.rid, t.sid;
+    
+    
+/*
+* Second email attempt! - parents
+*/
+INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)    
+SELECT t.rid, 'InfusionSoft_Email', 13320, t.fname, t.sem, NOW()
 	FROM _t t
     LEFT JOIN externalactivity ea ON ea.recipientpersonid = t.pid AND ea.ExternalID = 13320
     WHERE ea.ExternalActivityID IS NULL

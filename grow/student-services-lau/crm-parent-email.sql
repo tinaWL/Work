@@ -1,6 +1,6 @@
 DELIMITER $$
-DROP PROCEDURE IF EXISTS sp_test_math_la$$
-CREATE PROCEDURE sp_test_math_la()
+DROP PROCEDURE IF EXISTS sp_no_math_la$$
+CREATE PROCEDURE sp_no_math_la()
 
 BEGIN
 
@@ -117,22 +117,29 @@ UNION
 SELECT *, 'Math or Language Arts' AS 'Missing' FROM mla_neither 
 GROUP BY sid,mla_neither.pid;
 
-	
-
--- INSERT INTO externalactivity(`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`, `CustomField02`,`CreatedDate`) 
-SELECT DISTINCT pr.firstpersonid, 'InfusionSoft_Email', 133312, p.firstname, CONCAT(f.missing, ' for ',IF(sid = _FallSemesterID, _FallSemesterAbbrv, _WinterSemesterAbbrv)) AS 'SA'
+DROP TEMPORARY TABLE IF EXISTS setup; -- combination of students ONLY missing math, ONLY missing language arts, and missing NEITHER (no overlap)
+CREATE TEMPORARY TABLE IF NOT EXISTS setup	
+SELECT DISTINCT pr.firstpersonid AS 'pid', p.firstname as 'fname', CONCAT(f.missing, ' for ',IF(sid = _FallSemesterID, _FallSemesterAbbrv, _WinterSemesterAbbrv)) AS 'SA'
 FROM final f
 JOIN person p on p.personid = f.pid
 LEFT JOIN person_relation pr ON pr.secondpersonid = f.pid AND pr.deleted IS NULL
+LEFT JOIN externalactivity ea on ea.RecipientPersonID = pr.firstpersonid
 LEFT JOIN ( -- 504/IEP info
         SELECT pf.personid, COUNT(pf.person_fileid) AS 'FileCount'
         FROM person_file pf 
         WHERE pf.is_confidential=1
         GROUP BY pf.personid) AS cf ON cf.personid=p.personid
-WHERE cf.FileCount IS NULL
+WHERE cf.FileCount IS NULL 
 order by sid;
+
+
+INSERT INTO externalactivity(`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`, `CustomField02`,`CreatedDate`) 
+SELECT DISTINCT s.pid, 'InfusionSoft_Email', 13312, s.fname, s.sa, NOW()
+FROM setup s
+LEFT JOIN externalactivity ea ON ea.RecipientPersonID = s.pid AND ea.ExternalID = 13312
+WHERE ea.ExternalActivityID IS NULL;
 
 END $$
 DELIMITER ;
 
-CALL sp_test_math_la();
+CALL sp_no_math_la();

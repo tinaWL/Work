@@ -137,26 +137,26 @@ ORDER BY sid, id;
 -- INSERT INTO externalactivity (`RecipientPersonID`, `ActivityType`, `ExternalID`, `CustomField01`,`CustomField02`, `CreatedDate`)
 DROP TEMPORARY TABLE IF EXISTS info;
 CREATE TEMPORARY TABLE IF NOT EXISTS info
-SELECT pr.firstpersonid as 'pid', 'InfusionSoft_Email', 1111 as 'eid', r.fname, r.semabbrv, NOW()
+SELECT pr.firstpersonid as 'pid', 'InfusionSoft_Email', 1111 as 'eid', r.fname as 'fname', r.semabbrv as 'sem', NOW(), r.id as 'rid', r.sid as 'sid'
 	FROM res r 
     LEFT JOIN person_relation pr ON pr.secondpersonid = r.id AND pr.deleted IS NULL
 GROUP BY r.id, r.sid
 ORDER BY r.semabbrv;
 
 
---  select * from info;
+-- select * from info;
 
 select p.personid, ea.externalid, 
 	CASE
-    	WHEN date(ea.SuccessDate) = date_sub(curdate(), interval 7 day) AND ea.externalid  = 1111 THEN 2
+    	WHEN date(ea.SuccessDate) = date_sub(curdate(), interval 7 day) AND (ea.externalid = 1111) THEN 13320
         WHEN p.personid IS NULL THEN 0
-        ELSE '1111'
+        ELSE 13318
         END AS 'Status',  ea.SuccessDate, ea.CreatedDate
 from externalactivity ea
 left join info i on i.pid = ea.RecipientPersonID -- res
-left join person p on   p.personid =  i.pid
-where i.pid is null OR (ea.ExternalID = 1111 AND date(ea.SuccessDate) = date_sub(curdate(), interval 7 day)) and p.personid is not null;
--- group by i.pid;
+left join person p on  i.pid=  p.personid  
+where ea.ExternalID = 1111 or date(ea.SuccessDate) = date_sub(curdate(), interval 7 day)
+group by i.pid, i.sid, i.rid;
 
 
 

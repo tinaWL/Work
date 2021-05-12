@@ -18,7 +18,8 @@ IF(tpp.TPPApproved=1,
  		AND asd.studentdebitid IS NULL 
  		AND e.statusid IN (1,4) 
         AND tpp.tppayerid=tppe.tppayerid), 
- CONCAT(RIGHT(tppfs.max_s, 2), LEFT(tppfs.max_s, 1))) AS 'Last Semester'
+ CONCAT(RIGHT(tppfs.max_s, 2), LEFT(tppfs.max_s, 1))) AS 'Last Semester',
+ (SELECT COUNT(DISTINCT firstpersonid) FROM person_relation WHERE relationtype LIKE "%third%") AS 'SIS Contacts'
 
 FROM thirdpartypayer tpp   
 JOIN person tppp ON tpp.tppayerpersonid=tppp.personid 

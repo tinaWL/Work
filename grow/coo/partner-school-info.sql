@@ -1,4 +1,4 @@
-
+-- https://app.asana.com/0/1200281177330435/1200281177330460/f
 SELECT tpp.tppayerid, tppp.preferredname AS 'Third-Party Payer', tppp.state AS 'State', 
 (CASE WHEN tpp.tppapproved=1 THEN 'Active' ELSE 'Not Active' END) AS 'Status', 
 tppfs.Semester AS 'First Semester',

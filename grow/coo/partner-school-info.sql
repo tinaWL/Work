@@ -5,10 +5,10 @@ DROP PROCEDURE IF EXISTS `sp_partner_schools_info` $$
 CREATE PROCEDURE `sp_partner_schools_info`()
 BEGIN
 
--- Info to grab info for current semester, skipping Summer
+-- return a list of students in the 'current' semester not yet registered for the 'next' semester
 
 
-DECLARE _TargetSemesterID           INT;  -- Semeter to measure 
+DECLARE _TargetSemesterID           INT;  -- the semester they are not yet registered for
 DECLARE _CurrentSemesterID          INT;  -- current semester to get a baseline
 DECLARE _CurrentSemesterName VARCHAR(3);  -- determine whether current semester is Fall, Winter, or Summer
 
@@ -25,7 +25,20 @@ tppp.state AS 'State',
 (CASE WHEN tpp.tppapproved=1 THEN 'Active' ELSE 'Not Active' END) AS 'Status', 
 CONCAT(RIGHT(tppfs.Semester, 2), LEFT(tppfs.Semester, 1)) AS 'First Semester',
 -- If tpp is active, display student count, otherwise display last active semester
-IF(tpp.TPPApproved=1, 
+IF(tpp.TPPApproved=1 AND
+   (SELECT COUNT(DISTINCT(e.personid))
+     FROM enrollment e
+     JOIN section s ON s.sectionid = e.sectionid AND s.semesterid =  _TargetSemesterID
+     JOIN enrollmenttostudentdebit esd USING (enrollmentid)
+     JOIN studentdebit sd USING (studentdebitid)
+     JOIN thirdpartypayerengagement tppe USING (tppengagementid)
+     LEFT JOIN studentdebit asd ON asd.adjustsdebitid=sd.studentdebitid
+ WHERE s.classid 
+ 		NOT IN (414,497,502,543,544,545,546,502,551) 
+ 		AND asd.studentdebitid IS NULL 
+ 		AND e.statusid IN (1,4) 
+        AND tpp.tppayerid=tppe.tppayerid)!=0
+   , 
 (SELECT COUNT(DISTINCT(e.personid))
      FROM enrollment e
      JOIN section s ON s.sectionid = e.sectionid AND s.semesterid =  _TargetSemesterID

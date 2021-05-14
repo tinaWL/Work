@@ -24,9 +24,13 @@ SELECT tpp.tppayerid, tppp.preferredname AS 'Third-Party Payer',
 tppp.state AS 'State', 
 (CASE WHEN tpp.tppapproved=1 THEN 'Active' ELSE 'Not Active' END) AS 'Status', 
 CONCAT(RIGHT(tppfs.Semester, 2), LEFT(tppfs.Semester, 1)) AS 'First Semester',
--- If tpp is active, display student count, otherwise display last active semester
-IF(tpp.TPPApproved=1 AND
-   (SELECT COUNT(DISTINCT(e.personid))
+
+
+/*
+* IF the partner school is active AND the amount of students is not 0,
+* show the number of students, otherwise leave blank
+*/
+IF((SELECT COUNT(DISTINCT(e.personid)) -- IF the number of enrolled students is not 0...
      FROM enrollment e
      JOIN section s ON s.sectionid = e.sectionid AND s.semesterid =  _TargetSemesterID
      JOIN enrollmenttostudentdebit esd USING (enrollmentid)
@@ -34,12 +38,13 @@ IF(tpp.TPPApproved=1 AND
      JOIN thirdpartypayerengagement tppe USING (tppengagementid)
      LEFT JOIN studentdebit asd ON asd.adjustsdebitid=sd.studentdebitid
  WHERE s.classid 
- 		NOT IN (414,497,502,543,544,545,546,502,551) 
- 		AND asd.studentdebitid IS NULL 
- 		AND e.statusid IN (1,4) 
-        AND tpp.tppayerid=tppe.tppayerid)!=0
-   , 
-(SELECT COUNT(DISTINCT(e.personid))
+ 	 NOT IN (414,497,502,543,544,545,546,502,551) 
+ 	 AND asd.studentdebitid IS NULL 
+ 	 AND e.statusid IN (1,4) 
+     AND tpp.tppayerid=tppe.tppayerid)!=0
+   , -- end if condition ... 
+  
+(SELECT COUNT(DISTINCT(e.personid)) -- THEN display the number of students
      FROM enrollment e
      JOIN section s ON s.sectionid = e.sectionid AND s.semesterid =  _TargetSemesterID
      JOIN enrollmenttostudentdebit esd USING (enrollmentid)
@@ -51,13 +56,36 @@ IF(tpp.TPPApproved=1 AND
  		AND asd.studentdebitid IS NULL 
  		AND e.statusid IN (1,4) 
         AND tpp.tppayerid=tppe.tppayerid), 
- CONCAT(RIGHT(tppfs.max_s, 2), LEFT(tppfs.max_s, 1))) AS 'Last Semester',
+   		'') AS 'Current Students', -- ELSE display blank
+        
+   
+/*
+* IF the student count is 0, show the last semester that
+* students were enrolled in. Otherwise leave blank.
+*/
+ IF((SELECT COUNT(DISTINCT(e.personid)) -- IF the number of students is 0...
+     FROM enrollment e
+     JOIN section s ON s.sectionid = e.sectionid AND s.semesterid =  _TargetSemesterID
+     JOIN enrollmenttostudentdebit esd USING (enrollmentid)
+     JOIN studentdebit sd USING (studentdebitid)
+     JOIN thirdpartypayerengagement tppe USING (tppengagementid)
+     LEFT JOIN studentdebit asd ON asd.adjustsdebitid=sd.studentdebitid
+ WHERE s.classid 
+ 		NOT IN (414,497,502,543,544,545,546,502,551) 
+ 		AND asd.studentdebitid IS NULL 
+ 		AND e.statusid IN (1,4) 
+        AND tpp.tppayerid=tppe.tppayerid)=0,
+ CONCAT(RIGHT(tppfs.max_s, 2), LEFT(tppfs.max_s, 1)), -- THEN show the last active semester
+    '') AS 'Last Active Semester', -- ELSE leave blank
+ 
+ 
+ (tppfs.Max_id - tppfs.Min_id) AS 'Total Active Semesters',
  (SELECT COUNT(DISTINCT firstpersonid) FROM person_relation WHERE relationtype LIKE "%third%") AS 'SIS Contacts'
 
 FROM thirdpartypayer tpp   
 JOIN person tppp ON tpp.tppayerpersonid=tppp.personid 
 LEFT JOIN (
-    SELECT tppe.tppayerid, MIN(m.semesterid), m.semestername AS 'Semester', MAX(m.semestername) as 'Max_s'
+    SELECT tppe.tppayerid, MIN(m.semesterid) AS 'Min_id', m.semestername AS 'Semester', MAX(m.semestername) AS 'Max_s', MAX(m.semesterid) AS 'Max_id'
     FROM enrollment e
     JOIN section s USING (sectionid)
     JOIN semester m USING (semesterid)

@@ -11,7 +11,7 @@ CREATE TEMPORARY TABLE IF NOT EXISTS gpIDs AS
 SELECT DISTINCT p.personid, concat(p.firstname, ' ', p.lastname) AS 'name', sgy.StudentGradeYear, sp.studentprogramid, sp.programid, sp.statusid, sp.AnticipatedGradSemesterID, gp.GradPlanID
 
 FROM person p
-JOIN student_program sp ON sp.personid=p.personid AND sp.statusid=1 AND sp.is_deleted=0 AND sp.programid = 21
+JOIN student_program sp ON sp.personid=p.personid AND sp.statusid=1 AND sp.is_deleted=0 
 LEFT JOIN gradplanperson gp ON gp.StudentProgramID = sp.studentprogramid
 
 
@@ -27,9 +27,18 @@ LEFT JOIN (
 
 WHERE (sgy.studentGradeYear between 8 and 12) and gp.GradPlanID is null;
 
+
+
 INSERT INTO gradplanperson(`studentprogramid`, `gradplanid`, `createdbyid`,`createddate`)
 SELECT studentprogramid, 1, 22365, NOW()
-FROM gpids;
+FROM gpids
+WHERE programid = 21;
+
+
+INSERT INTO gradplanperson(`studentprogramid`, `gradplanid`, `createdbyid`,`createddate`)
+SELECT studentprogramid, 1, 22365, NOW()
+FROM gpids
+WHERE !(programid=21 and gradplanid=1);
 
 
 INSERT INTO gradplanpersonhistory(`gradplanpersonid`, `date`, `personid`)

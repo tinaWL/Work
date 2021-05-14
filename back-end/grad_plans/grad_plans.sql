@@ -36,7 +36,7 @@ WHERE programid = 21;
 
 
 INSERT INTO gradplanperson(`studentprogramid`, `gradplanid`, `createdbyid`,`createddate`)
-SELECT studentprogramid, 1, 22365, NOW()
+SELECT studentprogramid, 2, 22365, NOW()
 FROM gpids
 WHERE !(programid=21 and gradplanid=1);
 

@@ -1,28 +1,23 @@
-UPDATE student_program sp
-JOIN application a ON a.personid = sp.personid
-JOIN applicationstepelementresponse aser ON aser.ApplicationID = a.ApplicationID
-SET sp.HasIEP = 1
-WHERE aser.ApplicationStepElementID IN(1247) AND aser.ResponseValue LIKE "%yes%" AND sp.programid=21 AND sp.is_deleted=0 AND sp.statusid IN (0,1);
+-- Students with 504 files that don't have them marked 
+SELECT p.personid, p.firstname, p.lastname, sgy.studentgradeyear, cf.FileDesc FROM person p 
+JOIN ( -- 504 info
+	SELECT pf.personid, pf.description AS 'FileDesc'
+    	FROM person_file pf
+	    JOIN file f ON f.fileid = pf.fileid AND f.deleted = 0
+    WHERE pf.is_confidential=1 
+    	AND pf.description LIKE "%504%"
+    	AND pf.personid NOT IN(12865,13931,18686) -- 504 Terminated
+    GROUP BY pf.personid) AS cf ON cf.personid=p.personid
+JOIN ( -- Grade year
+    SELECT sp.personid, MAX(sy.year_id) AS 'StudentGradeYear'
+    	FROM student_program sp
+    	JOIN program pr ON pr.programid=sp.programid
+        JOIN institution_year_semester iys ON iys.semester_id = 46
+        JOIN institution_year iy ON iy.id = iys.institution_year_id AND iy.institution_id=pr.institutionid
+        JOIN student_year sy ON sp.studentprogramid = sy.student_program_id AND sy.institution_year_id = iy.id AND sy.is_deleted = 0
+    WHERE sp.statusid in (0, 1 )
+    	AND sp.is_deleted=0
+    	AND sp.Has504 = 0
+    GROUP BY sp.personid) AS sgy ON sgy.personid = p.personid  
+ORDER BY `studentgradeyear`  DESC
 
-INSERT INTO student_program_history(`student_program_id`, `date`, `userid`, `student_program_field`, new_value)
-SELECT DISTINCT(sp.programid), aser.ResponseDate, '29', 'HasIEP', '1'
-FROM student_program sp
-JOIN application a ON a.personid = sp.personid
-JOIN applicationstepelementresponse aser ON aser.ApplicationID = a.ApplicationID
-LEFT JOIN student_program_history sph ON sph.student_program_id = sp.studentprogramid
-WHERE sph.student_program_id IS NULL AND aser.ApplicationStepElementID IN(1247) AND aser.ResponseValue LIKE "%yes%" AND sp.programid=21 AND sp.is_deleted=0 AND sp.statusid IN (0,1);
-
--- update for 504
-UPDATE student_program sp
-JOIN application a ON a.personid = sp.personid
-JOIN applicationstepelementresponse aser ON aser.ApplicationID = a.ApplicationID
-SET sp.Has504 = 1
-WHERE aser.ApplicationStepElementID IN(1250) AND aser.ResponseValue LIKE "%yes%" AND sp.programid=21 AND sp.is_deleted=0 AND sp.statusid IN (0,1);
-
-INSERT INTO student_program_history(`student_program_id`, `date`, `userid`, `student_program_field`, new_value)
-SELECT DISTINCT(sp.programid), aser.ResponseDate, '29', 'Has504', '1'
-FROM student_program sp
-JOIN application a ON a.personid = sp.personid
-JOIN applicationstepelementresponse aser ON aser.ApplicationID = a.ApplicationID
-LEFT JOIN student_program_history sph ON sph.student_program_id = sp.studentprogramid
-WHERE sph.student_program_id IS NULL AND aser.ApplicationStepElementID IN(1250) AND aser.ResponseValue LIKE "%yes%" AND sp.programid=21 AND sp.is_deleted=0 AND sp.statusid IN (0,1);

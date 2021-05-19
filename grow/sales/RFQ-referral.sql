@@ -1,3 +1,4 @@
+-- https://redmine.williamsburglearning.com/issues/3132
 CREATE OR REPLACE VIEW `sis_live`.`vw_t_sales_pipeline_semester` AS
 SELECT cc.crmid, cc.personid,
 

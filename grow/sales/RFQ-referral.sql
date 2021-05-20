@@ -12,7 +12,8 @@ SELECT cc.crmid, cc.personid,
     IFNULL(COUNT(DISTINCT(sa.applicationid)), 0) AS 'Applications Started',
     IFNULL(COUNT(DISTINCT(ca.ApplicationID)), 0) AS 'Applications Completed',
     IFNULL(COUNT(DISTINCT(e.personid)), 0) AS 'New Children Registered', 
-    IFNULL(SUM(sd.amount), 0) AS 'Gross 21F Sales'   
+    IFNULL(SUM(sd.amount), 0) AS 'Gross 21F Sales',
+    IFNULL(tppp.preferredname, 'WA') AS 'SOR'
 
 FROM crmcache cc
 LEFT JOIN `user` u ON u.userid=cc.personid  
@@ -26,5 +27,8 @@ LEFT JOIN enrollment e ON e.personid=pr.secondpersonid AND e.statusid=1 AND e.cr
     AND e.personid NOT IN (SELECT DISTINCT(e.personid) FROM enrollment e JOIN section USING (sectionid) WHERE semesterid < 45)      
 LEFT JOIN enrollmenttostudentdebit esd USING (enrollmentid)
 LEFT JOIN studentdebit sd ON sd.studentdebitid=esd.StudentDebitID AND sd.obsolete=0
+LEFT JOIN thirdpartypayerengagement tppe ON tppe.tppengagementid=sd.tppengagementid
+LEFT JOIN thirdpartypayer tpp ON tpp.tppayerid=tppe.tppayerid
+LEFT JOIN person tppp ON tppp.personid=tpp.tppayerpersonid
 
 GROUP BY cc.crmid  

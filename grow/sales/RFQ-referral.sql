@@ -9,8 +9,8 @@ SELECT cc.crmid, cc.personid,
             WHERE ph.field='lastname' AND ph.old_value IS NULL AND ph.person_id=cc.personid
             GROUP BY ph.person_id), '') AS 'SIS Account Created',
     IFNULL(COUNT(DISTINCT(pr.secondpersonid)), 0) AS 'Children in SIS',
-    IFNULL(COUNT(DISTINCT(sa.applicationid)), 0) AS 'LAU Applications Started',
-    IFNULL(COUNT(DISTINCT(ca.ApplicationID)), 0) AS 'LAU Applications Completed',
+    IFNULL(COUNT(DISTINCT(sa.applicationid)), 0) AS 'Applications Started',
+    IFNULL(COUNT(DISTINCT(ca.ApplicationID)), 0) AS 'Applications Completed',
     IFNULL(COUNT(DISTINCT(e.personid)), 0) AS 'New Children Registered', 
     IFNULL(SUM(sd.amount), 0) AS 'Gross 21F Sales'   
 
